@@ -1,4 +1,4 @@
-# 🚀 Team QaAgent
+# 🚀 QaAgent
 
 ---
 
