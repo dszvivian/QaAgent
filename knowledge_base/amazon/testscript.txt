@@ -1,0 +1,8 @@
+"1. Open browser
+2. Navigate to amazon.in
+3. Enter 'red t-shirt' in search bar
+4. Click on search button"
+"1. From search results page
+2. Locate size filter section
+3. Select 'Medium' size filter"
+1. Check first few product results after applying filter

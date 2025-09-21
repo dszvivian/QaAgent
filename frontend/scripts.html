@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QaAgent - Script Management</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container script-page">
+        <header>
+            <h1 class="page-heading">Script Management</h1>
+            <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Back to QaAgent</a>
+        </header>
+        
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <i class="fas fa-file-code stat-icon"></i>
+                <div class="stat-content">
+                    <div class="stat-value" id="script-count">0</div>
+                    <div class="stat-label">Available Scripts</div>
+                </div>
+            </div>
+            <!-- Date/time and username stat cards removed as requested -->
+        </div>
+        
+        <div class="control-bar">
+            <div class="search-container">
+                <input type="text" id="script-search" placeholder="Search scripts..." class="script-search">
+                <i class="fas fa-search search-icon"></i>
+            </div>
+            <button id="refresh-scripts" class="control-button refresh-button">
+                <i class="fas fa-sync-alt"></i>
+                <span>Refresh</span>
+            </button>
+        </div>
+        
+        <main class="dashboard-layout">
+            <div class="scripts-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-code"></i> Available Scripts</h2>
+                </div>
+                
+                <div id="scripts-grid" class="scripts-grid">
+                    <div class="loading-overlay">
+                        <div class="spinner-container">
+                            <div class="spinner"></div>
+                            <p>Loading scripts...</p>
+                        </div>
+                    </div>
+                    <!-- Scripts will be loaded here -->
+                </div>
+            </div>
+            
+            <div class="execution-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-terminal"></i> Script Execution</h2>
+                </div>
+                
+                <div id="script-details" class="script-details">
+                    <div class="no-selection-state">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'%3E%3C/path%3E%3Cpolyline points='14 2 14 8 20 8'%3E%3C/polyline%3E%3Cline x1='16' y1='13' x2='8' y2='13'%3E%3C/line%3E%3Cline x1='16' y1='17' x2='8' y2='17'%3E%3C/line%3E%3Cpolyline points='10 9 9 9 8 9'%3E%3C/polyline%3E%3C/svg%3E" class="placeholder-image" alt="Select a script">
+                        <p>Select a script from the list to view details and execute</p>
+                    </div>
+                    <div class="selection-details hidden">
+                        <div class="script-header">
+                            <h3 id="selected-script-name">script.js</h3>
+                            <span class="script-badge"><i class="fab fa-js"></i> JavaScript</span>
+                        </div>
+                        
+                        <div class="script-code-container">
+                            <div class="code-header">
+                                <h4>Script Content</h4>
+                                <button id="fullscreen-btn" class="icon-button" title="View in fullscreen">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                            </div>
+                            <div class="script-code-wrapper">
+                                <pre id="script-preview" class="script-preview">// Loading script content...</pre>
+                            </div>
+                        </div>
+                        
+                        <div class="script-actions">
+                            <button id="run-script" class="action-button run-button">
+                                <i class="fas fa-play"></i>
+                                <span>Run Script</span>
+                            </button>
+                        </div>
+                        
+                        <div class="execution-section">
+                            <div class="output-header">
+                                <h4><i class="fas fa-terminal"></i> Output</h4>
+                                <div class="output-actions">
+                                    <div id="execution-status" class="status-pill"></div>
+                                    <button id="clear-output" class="text-button" disabled>
+                                        <i class="fas fa-trash-alt"></i> Clear
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="output-container">
+                                <pre id="script-output" class="script-output">No script has been executed yet.</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Fullscreen Modal with Fixed Functionality -->
+    <div id="fullscreen-modal" class="fullscreen-modal">
+        <div class="fullscreen-header">
+            <div class="fullscreen-title">
+                <i class="fab fa-js"></i> <span id="fullscreen-script-name">script.js</span>
+            </div>
+            <button id="close-fullscreen-btn" class="close-button">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <pre id="fullscreen-content" class="fullscreen-content"></pre>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize elements
+            const refreshScriptsBtn = document.getElementById('refresh-scripts');
+            const scriptsGrid = document.getElementById('scripts-grid');
+            const runScriptBtn = document.getElementById('run-script');
+            const scriptOutput = document.getElementById('script-output');
+            const selectedScriptNameElement = document.getElementById('selected-script-name');
+            const executionStatus = document.getElementById('execution-status');
+            const scriptSearch = document.getElementById('script-search');
+            const scriptCount = document.getElementById('script-count');
+            const scriptPreview = document.getElementById('script-preview');
+            const clearOutputBtn = document.getElementById('clear-output');
+            const noSelectionState = document.querySelector('.no-selection-state');
+            const selectionDetails = document.querySelector('.selection-details');
+            
+            // Fullscreen elements
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            const fullscreenModal = document.getElementById('fullscreen-modal');
+            const fullscreenContent = document.getElementById('fullscreen-content');
+            const fullscreenScriptName = document.getElementById('fullscreen-script-name');
+            const closeFullscreenBtn = document.getElementById('close-fullscreen-btn');
+            
+            let selectedScript = null;
+            let allScripts = [];
+            let scriptContentCache = {};
+            
+            // Improved fullscreen functionality
+            fullscreenBtn.addEventListener('click', function() {
+                // Only show fullscreen if we have content
+                if (selectedScript) {
+                    const scriptContent = scriptPreview.textContent || '// No content available';
+                    fullscreenScriptName.textContent = selectedScript;
+                    fullscreenContent.textContent = scriptContent;
+                    
+                    // Show the modal
+                    fullscreenModal.classList.add('active');
+                    document.body.classList.add('modal-open');
+                }
+            });
+            
+            closeFullscreenBtn.addEventListener('click', function() {
+                fullscreenModal.classList.remove('active');
+                document.body.classList.remove('modal-open');
+            });
+            
+            // Close on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && fullscreenModal.classList.contains('active')) {
+                    fullscreenModal.classList.remove('active');
+                    document.body.classList.remove('modal-open');
+                }
+            });
+            
+            // Close when clicking outside of the content (on the modal background)
+            fullscreenModal.addEventListener('click', function(e) {
+                // Only close if clicking directly on the modal (not its children)
+                if (e.target === fullscreenModal) {
+                    fullscreenModal.classList.remove('active');
+                    document.body.classList.remove('modal-open');
+                }
+            });
+            
+            // Function to load and display scripts
+            async function loadScripts() {
+                try {
+                    executionStatus.textContent = '';
+                    executionStatus.className = 'status-pill';
+                    showLoadingState();
+                    
+                    const response = await fetch('/api/scripts');
+                    const data = await response.json();
+                    
+                    allScripts = data.scripts || [];
+                    scriptCount.textContent = allScripts.length;
+                    
+                    if (allScripts.length > 0) {
+                        displayScripts(allScripts);
+                    } else {
+                        showEmptyState();
+                    }
+                    
+                    // Reset selection when refreshing
+                    resetSelection();
+                } catch (error) {
+                    showErrorState(error);
+                    console.error('Failed to load scripts:', error);
+                }
+            }
+            
+            // Display scripts as buttons in the grid
+            function displayScripts(scripts) {
+                scriptsGrid.innerHTML = '';
+                
+                scripts.forEach(script => {
+                    const scriptButton = createScriptButton(script);
+                    scriptsGrid.appendChild(scriptButton);
+                });
+            }
+            
+            // Create a script button element
+            function createScriptButton(script) {
+                const scriptButton = document.createElement('button');
+                scriptButton.className = 'script-button';
+                scriptButton.dataset.script = script;
+                
+                // Extract script name without extension for cleaner display
+                const displayName = script.replace(/\.js$/, '');
+                
+                scriptButton.innerHTML = `
+                    <div class="script-button-icon">
+                        <i class="fab fa-js"></i>
+                    </div>
+                    <div class="script-button-name">${displayName}</div>
+                `;
+                
+                // Add click event to select script
+                scriptButton.addEventListener('click', function() {
+                    selectScript(script, scriptButton);
+                });
+                
+                // Double click to run
+                scriptButton.addEventListener('dblclick', function() {
+                    selectScript(script, scriptButton);
+                    runScript();
+                });
+                
+                return scriptButton;
+            }
+            
+            // Select a script
+            function selectScript(script, element) {
+                // Remove selected class from all scripts
+                document.querySelectorAll('.script-button').forEach(el => {
+                    el.classList.remove('selected');
+                });
+                
+                // Add selected class to clicked script
+                element.classList.add('selected');
+                selectedScript = script;
+                
+                // Update UI to show selection
+                selectedScriptNameElement.textContent = script;
+                noSelectionState.classList.add('hidden');
+                selectionDetails.classList.remove('hidden');
+                runScriptBtn.disabled = false;
+                
+                // Load script content
+                loadScriptContent(script);
+            }
+            
+            // Load script content
+            async function loadScriptContent(script) {
+                try {
+                    // Display loading state
+                    scriptPreview.textContent = '// Loading script content...';
+                    scriptPreview.classList.add('loading');
+                    
+                    // If we have cached content, use that instead of fetching again
+                    if (scriptContentCache[script]) {
+                        scriptPreview.textContent = scriptContentCache[script];
+                        scriptPreview.classList.remove('loading');
+                        return;
+                    }
+                    
+                    // Read script content directly from file system
+                    const response = await fetch(`/api/scripts/content?script=${encodeURIComponent(script)}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Failed to load script: ${response.status} ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    
+                    const content = data.content;
+                    
+                    // Cache the content
+                    scriptContentCache[script] = content;
+                    
+                    // Display the content
+                    scriptPreview.textContent = content;
+                    scriptPreview.classList.remove('loading');
+                    
+                } catch (error) {
+                    console.error('Error loading script content:', error);
+                    scriptPreview.textContent = `// Error loading script content: ${error.message}`;
+                    scriptPreview.classList.remove('loading');
+                }
+            }
+            
+            // Reset script selection
+            function resetSelection() {
+                selectedScript = null;
+                noSelectionState.classList.remove('hidden');
+                selectionDetails.classList.add('hidden');
+                runScriptBtn.disabled = true;
+                clearOutputBtn.disabled = true;
+                
+                // Reset fullscreen if active
+                if (fullscreenModal.classList.contains('active')) {
+                    fullscreenModal.classList.remove('active');
+                    document.body.classList.remove('modal-open');
+                }
+            }
+            
+            // Show loading state in the script grid
+            function showLoadingState() {
+                scriptsGrid.innerHTML = '';
+                const loadingOverlay = document.createElement('div');
+                loadingOverlay.className = 'loading-overlay';
+                loadingOverlay.innerHTML = `
+                    <div class="spinner-container">
+                        <div class="spinner"></div>
+                        <p>Loading scripts...</p>
+                    </div>
+                `;
+                scriptsGrid.appendChild(loadingOverlay);
+            }
+            
+            // Show empty state in the script grid
+            function showEmptyState() {
+                scriptsGrid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-file-code empty-icon"></i>
+                        <h3>No Scripts Found</h3>
+                        <p>Add JavaScript files to your scripts folder and click Refresh</p>
+                    </div>
+                `;
+            }
+            
+            // Show error state in the script grid
+            function showErrorState(error) {
+                scriptsGrid.innerHTML = `
+                    <div class="error-state">
+                        <i class="fas fa-exclamation-circle error-icon"></i>
+                        <h3>Error Loading Scripts</h3>
+                        <p>${error.message}</p>
+                        <button id="retry-button" class="retry-button">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `;
+                
+                // Add retry functionality
+                document.getElementById('retry-button').addEventListener('click', loadScripts);
+            }
+            
+            // Run the selected script
+            async function runScript() {
+                if (!selectedScript) return;
+                
+                try {
+                    executionStatus.textContent = 'Running';
+                    executionStatus.className = 'status-pill running';
+                    scriptOutput.textContent = 'Executing script...';
+                    scriptOutput.className = 'script-output running-output';
+                    clearOutputBtn.disabled = true;
+                    
+                    // Visually indicate running script button
+                    runScriptBtn.classList.add('running');
+                    runScriptBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Running...</span>';
+                    runScriptBtn.disabled = true;
+                    
+                    const response = await fetch('/api/scripts/run', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            script: selectedScript
+                        }),
+                    });
+                    
+                    const result = await response.json();
+                    
+                    // Reset run button
+                    runScriptBtn.classList.remove('running');
+                    runScriptBtn.innerHTML = '<i class="fas fa-play"></i><span>Run Script</span>';
+                    runScriptBtn.disabled = false;
+                    
+                    if (result.success) {
+                        executionStatus.textContent = 'Success';
+                        executionStatus.className = 'status-pill success';
+                        
+                        if (result.output) {
+                            scriptOutput.textContent = result.output;
+                            scriptOutput.className = 'script-output output-success';
+                        } else {
+                            scriptOutput.textContent = 'Script executed successfully (no output)';
+                            scriptOutput.className = 'script-output output-success';
+                        }
+                        
+                        showNotification('Script executed successfully', 'success');
+                    } else {
+                        executionStatus.textContent = 'Failed';
+                        executionStatus.className = 'status-pill error';
+                        
+                        if (result.error) {
+                            scriptOutput.textContent = result.error;
+                            scriptOutput.className = 'script-output output-error';
+                        } else {
+                            scriptOutput.textContent = `Script failed with return code: ${result.returncode}`;
+                            scriptOutput.className = 'script-output output-error';
+                        }
+                        
+                        showNotification('Script execution failed', 'error');
+                    }
+                    
+                    clearOutputBtn.disabled = false;
+                } catch (error) {
+                    // Reset run button
+                    runScriptBtn.classList.remove('running');
+                    runScriptBtn.innerHTML = '<i class="fas fa-play"></i><span>Run Script</span>';
+                    runScriptBtn.disabled = false;
+                    
+                    executionStatus.textContent = 'Error';
+                    executionStatus.className = 'status-pill error';
+                    scriptOutput.textContent = `Error: ${error.message}`;
+                    scriptOutput.className = 'script-output output-error';
+                    clearOutputBtn.disabled = false;
+                    showNotification('Error executing script', 'error');
+                    console.error('Failed to run script:', error);
+                }
+            }
+            
+            // Display notification
+            function showNotification(message, type) {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.innerHTML = `
+                    <div class="notification-icon">
+                        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                    </div>
+                    <div class="notification-content">
+                        <p>${message}</p>
+                    </div>
+                    <button class="notification-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                document.body.appendChild(notification);
+                
+                // Add close functionality
+                notification.querySelector('.notification-close').addEventListener('click', () => {
+                    notification.classList.add('notification-hiding');
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 300);
+                });
+                
+                // Auto remove after 5 seconds
+                setTimeout(() => {
+                    notification.classList.add('notification-hiding');
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 300);
+                }, 5000);
+                
+                // Animate in
+                setTimeout(() => {
+                    notification.classList.add('notification-visible');
+                }, 10);
+            }
+            
+            // Search scripts
+            function searchScripts(query) {
+                if (!query) {
+                    displayScripts(allScripts);
+                    return;
+                }
+                
+                const filteredScripts = allScripts.filter(script => 
+                    script.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                if (filteredScripts.length > 0) {
+                    displayScripts(filteredScripts);
+                } else {
+                    scriptsGrid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-search empty-icon"></i>
+                            <h3>No Matching Scripts</h3>
+                            <p>Try a different search term</p>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Event listeners
+            refreshScriptsBtn.addEventListener('click', loadScripts);
+            runScriptBtn.addEventListener('click', runScript);
+            
+            scriptSearch.addEventListener('input', function() {
+                searchScripts(this.value.trim());
+            });
+            
+            clearOutputBtn.addEventListener('click', function() {
+                scriptOutput.textContent = 'No script has been executed yet.';
+                scriptOutput.className = 'script-output';
+                executionStatus.textContent = '';
+                executionStatus.className = 'status-pill';
+                this.disabled = true;
+            });
+            
+            // Initial load of scripts
+            loadScripts();
+        });
+    </script>
+</body>
+</html>

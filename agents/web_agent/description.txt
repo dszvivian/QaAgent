@@ -1,0 +1,13 @@
+Web Agent is an advanced browser automation agent designed to handle complex web-related tasks through intelligent navigation and interaction. This agent can perform expert-level web operations including form filling, bill payments, document downloads, information extraction, and deep research across multiple sources. 
+
+The agent operates through a structured approach: it analyzes user queries, breaks them into subtasks, navigates to appropriate search domains (Google, YouTube, Wikipedia, Twitter, etc.), and systematically gathers information while adapting to different website layouts and challenges. It can handle obstacles like captchas, ads, and banners, perform targeted research in separate browser tabs, and extract precise information from complex websites.
+
+Key capabilities include:
+- Deep research across multiple sources and domains
+- Form automation and transaction processing
+- Information verification and cross-referencing
+- Adaptive problem-solving when encountering web obstacles
+- Multi-tab browsing for comprehensive research
+- Real-time decision making based on browser state and progress tracking
+
+The agent follows a methodical approach with built-in evaluation, memory management, and strategic planning to ensure tasks are completed efficiently within specified step limits while maintaining accuracy and reliability.

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA Agent: Amazon.in</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container chat-page">
+        <header>
+            <h1 class="product-name">QA Agent: Amazon.in</h1>
+            <a href="/" class="back-link">Back to MainPage</a>
+            <div id="status-indicator" class="status-indicator disconnected">Disconnected</div>
+        </header>
+        
+        <div class="chat-container">
+            <div id="chat-messages" class="chat-messages">
+                <!-- Messages will be added here -->
+            </div>
+            <div id="typing-indicator" class="typing-indicator hidden">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <form id="chat-form" class="chat-form">
+                <input type="text" id="user-input" class="user-input" placeholder="Type your message here..." autocomplete="off">
+                <button type="submit" class="submit-button">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const chatMessages = document.getElementById('chat-messages');
+            const userInput = document.getElementById('user-input');
+            const chatForm = document.getElementById('chat-form');
+            const typingIndicator = document.getElementById('typing-indicator');
+            const statusIndicator = document.getElementById('status-indicator');
+            
+            // Socket.io connection
+            const socket = io();
+            let welcomeSent = false;
+            
+            // Connection status handling
+            socket.on('connect', function() {
+                statusIndicator.textContent = 'Connected';
+                statusIndicator.className = 'status-indicator connected';
+                
+                // Only emit join once
+                if (!welcomeSent) {
+                    socket.emit('join', { option: 'Amazon.in' });
+                    welcomeSent = true;
+                }
+            });
+            
+            socket.on('disconnect', function() {
+                statusIndicator.textContent = 'Disconnected';
+                statusIndicator.className = 'status-indicator disconnected';
+                welcomeSent = false; // Reset so we get welcome message on reconnect
+            });
+            
+            socket.on('connect_error', function() {
+                statusIndicator.textContent = 'Connection Error';
+                statusIndicator.className = 'status-indicator error';
+            });
+            
+            // Process and extract text from response object
+            function extractTextFromResponse(response) {
+                try {
+                    // If it's already a string, use it directly
+                    if (typeof response === 'string') {
+                        return response;
+                    } 
+                    
+                    // If it's an object, try to extract text from it
+                    if (typeof response === 'object' && response !== null) {
+                        // Case 1: Final response with completed state
+                        if (response.final === true && 
+                            response.status && 
+                            response.status.message && 
+                            response.status.message.parts) {
+                            for (const part of response.status.message.parts) {
+                                if (part.kind === 'text' && part.text) {
+                                    return part.text;
+                                }
+                            }
+                        }
+                        
+                        // Case 2: Status update with message
+                        if (response.kind === 'status-update' && 
+                            response.status && 
+                            response.status.message && 
+                            response.status.message.parts) {
+                            for (const part of response.status.message.parts) {
+                                if (part.kind === 'text' && part.text) {
+                                    return part.text;
+                                }
+                            }
+                        }
+                        
+                        // Case 3: Direct parts array
+                        if (response.parts && Array.isArray(response.parts)) {
+                            for (const part of response.parts) {
+                                if (part.kind === 'text' && part.text) {
+                                    return part.text;
+                                }
+                            }
+                        }
+                        
+                        // Last resort: return response as string
+                        return JSON.stringify(response);
+                    }
+                    
+                    return "Could not extract text from response.";
+                } catch (error) {
+                    console.error("Error extracting text from response:", error);
+                    return "Error processing response.";
+                }
+            }
+            
+            // Handle chat response
+            socket.on('chat response', function(data) {
+                let messageText;
+                
+                if (typeof data.response === 'string') {
+                    // If server already extracted the text for us
+                    messageText = data.response;
+                } else {
+                    // If we need to extract it on the client side
+                    messageText = extractTextFromResponse(data.response);
+                }
+                
+                // Add the extracted text to the chat
+                addBotMessage(messageText);
+            });
+            
+            // Typing indicators
+            socket.on('user typing', function() {
+                typingIndicator.classList.remove('hidden');
+                scrollToBottom();
+            });
+            
+            socket.on('user stop typing', function() {
+                typingIndicator.classList.add('hidden');
+            });
+            
+            // Form submission
+            chatForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const message = userInput.value.trim();
+                
+                if (message) {
+                    // Add user message to chat
+                    addUserMessage(message);
+                    
+                    // Send message to server
+                    socket.emit('chat message', { message: message });
+                    
+                    // Clear input
+                    userInput.value = '';
+                }
+            });
+            
+            // Helper functions
+            function addUserMessage(message) {
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message user-message';
+                messageElement.textContent = message;
+                chatMessages.appendChild(messageElement);
+                scrollToBottom();
+            }
+            
+            function addBotMessage(message) {
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message bot-message';
+                messageElement.textContent = message;
+                chatMessages.appendChild(messageElement);
+                scrollToBottom();
+            }
+            
+            function scrollToBottom() {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        });
+    </script>
+</body>
+</html>

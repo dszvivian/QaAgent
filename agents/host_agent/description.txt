@@ -1,0 +1,17 @@
+The host_agent is the central orchestrator in the A2A agentic AI system. It is responsible for understanding user queries, coordinating with specialized agents, and ensuring the right workflows are executed.
+
+The host_agent itself does not perform specialized work such as browsing, automation, or context retrieval. Instead, it:
+
+Analyzes the user query.
+
+uses query_knowledge_base tool to get the relevant context for navigation 
+
+Collects the context returned by the context_retrieval_agent and appends it to the user query.
+
+Delegates web automation and browsing tasks to the web_agent when needed.
+
+uses terminal server to generates test script file using generate_test_script and saves the js file using save_file at the end.
+
+Provides the user with clear summaries and workspace file references.
+
+The host_agent acts purely as an orchestrator, ensuring the flow of tasks between agents and tools is smooth, context-driven, and traceable.

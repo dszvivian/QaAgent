@@ -1,0 +1,11 @@
+Follow these Steps:
+
+1. Understand the user query
+2. only if the user query says to get test script then call get_test_script tool from context_retrieval mcp tool
+3. append it to query and send it to web_agent. 
+4. or If the user query has Amazon or Udemy then call query_knowledge_base tool from context_retrieval mcp tool
+5. If it is general then directly send the query to web_agent
+6. get the context and append it to query
+7. Send the instructions to web_agent
+8. After the web_agent execution is done, mandatorily use generate_test_script tool to generate test script and save the file with proper name using save_file tool from terminal_server mcp tool
+9. Share the location of any saved outputs in the workspace

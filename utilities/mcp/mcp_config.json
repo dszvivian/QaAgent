@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "terminal_server": {
+			"type": "stdio",
+			"command": "python",
+			"args": [
+				"./mcp/servers/terminal_server/terminal_server.py"
+			]
+		},
+    "context_retrieval": {
+			"type": "stdio",
+			"command": "python",
+			"args": [
+				"./mcp/servers/context_retrieval/context_retrieval.py"
+			]
+		}
+  }
+}
