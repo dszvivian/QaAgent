@@ -36,14 +36,6 @@ See detailed steps in [Installation.md](./Installation.md)
 
 ---
 
-## 📊 Results
-
-| Dashboard | Chat Interface | Test Script Execution |
-|-----------|-----------|-----------|
-| ![Result 1](./images/image.png) | ![Result 2](./images/image-1.png) | ![Result 3](./images/image-2.png) |
-
----
-
 ## 📂 Execution Results
 
 - Explore execution results in the [`frontend/scripts/`](./frontend/scripts/) directory.
